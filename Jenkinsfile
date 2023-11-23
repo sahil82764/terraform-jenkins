@@ -28,20 +28,33 @@ pipeline {
         }
 
         stage('Approval') {
-            when {
-                not {
-                    equals expected: true, actual: params.autoApprove
-                }
-            }
+    when {
+        not {
+            equals expected: true, actual: params.autoApprove
+        }
+    }
 
-            steps {
-                script {
-                    def plan = readFile 'terraform/tfplan.txt'
-                    input message: 'Do you want to apply the plan?',
-                          parameters: [text(name: 'Plan', description: 'Please review the plan', defaultValue: plan)]
-                }
+    steps {
+        script {
+            def plan = readFile 'terraform/tfplan.txt'
+
+            // Use echo to display the plan and wait for user input
+            echo "Review the plan:\n${plan}"
+            sleep time: 5, unit: 'SECONDS'  // Wait for 5 seconds (adjust as needed)
+
+            // Assume approval if autoApprove is true
+            def approval = params.autoApprove ? 'yes' : input(
+                message: 'Do you want to apply the plan?',
+                parameters: [choice(name: 'Approval', choices: ['yes', 'no'], description: 'Approve or reject the plan')]
+            )
+
+            if (approval == 'no') {
+                error('Plan rejected. Exiting.')
             }
         }
+    }
+}
+
 
         stage('Apply') {
             steps {
